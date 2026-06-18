@@ -32,9 +32,9 @@ import '../navigation/spatial-navigation-polyfill.js';
 import '../navigation/spatial-navigation.js';
 
 // Import navigation initialization system
-import { 
-  initializeNavigationMode, 
-  applyNavigationMode, 
+import {
+  initializeNavigationMode,
+  applyNavigationMode,
   initializeGlobalNavigation,
   getCurrentMode,
   getEffectiveMode,
@@ -51,10 +51,10 @@ import { KEYS } from '../input/keys.js';
 import { initInputHandler, executeColorAction, registerKeyHandler, setBackHandler } from '../input/handler.js';
 import { initPointer, isPointerActive, togglePointer } from '../input/pointer.js';
 import { wrapTextInputs, unwrapTextInputs, activateInput, deactivateInput, isIMEActive } from '../input/text-input.js';
-import { 
+import {
   enableScrollIntoView, disableScrollIntoView, setScrollEnabled, scrollElementIntoView,
   setInitialFocus, lockViewport, unlockViewport,
-  observeDOM, stopObservingDOM 
+  observeDOM, stopObservingDOM
 } from '../focus/manager.js';
 import { initPortal, showPortal, hidePortal, refreshPortal } from '../ui/portal.js';
 import { initModal } from '../ui/modal.js';
@@ -71,13 +71,13 @@ import featureLoader from '../features/index.js';
 import textInputProtection from '../features/text-input-protection.js';
 import userscriptEngine from '../features/userscripts.js';
 import userscriptRegistry from '../features/userscript-registry.js';
-import { 
+import {
   registerCards, unregisterCards, clearRegistrations, getRegistrations,
-  processCards, initCards, shutdownCards 
+  processCards, initCards, shutdownCards
 } from './cards.js';
 import {
   registerElements, unregisterElements, clearRegistrations as clearElementRegistrations,
-  getRegistrations as getElementRegistrations, processElements,
+  getElementRegistrations, processElements,
   initElements, shutdownElements
 } from './elements.js';
 import {
@@ -178,17 +178,31 @@ function tpHud(msg) {
     h.textContent = '[TP ' + VERSION + '] ' + msg;
     // Auto-hide after 8 seconds
     if (h._timer) clearTimeout(h._timer);
-    h._timer = setTimeout(function() { 
-      if (h) h.style.opacity = '0.3'; 
+    h._timer = setTimeout(function () {
+      if (h) h.style.opacity = '0.3';
     }, 8000);
   } catch (e) {
     // Silently fail
   }
 }
 
+// Agrega esta función de spoofing cerca de tus funciones de utilidad
+function applyUserAgentSpoof(mode) {
+  if (mode === 'chrome') {
+    (function () {
+      const newUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+      Object.defineProperty(window.navigator, 'userAgent', {
+        get: () => newUA,
+        set: value => { /* Ignorar cualquier intento de establecer un nuevo valor */ }
+      });
+    })();
+    console.log('TizenPortal: User-Agent set to Chrome');
+  }
+}
+
 // Show HUD immediately when script loads
 tpHud('Script loaded, waiting for DOM...');
-
 /**
  * Synchronous capture of the URL hash and query string at the exact moment
  * this script is executed.  Target-site SPA routers often call
@@ -199,13 +213,12 @@ tpHud('Script loaded, waiting for DOM...');
  * parameter injection mechanism remains the authoritative source of card/
  * bundle data regardless of what the host page does to its own URL.
  */
-var capturedHash = (function() {
-  try { return window.location.hash || ''; } catch(e) { return ''; }
+var capturedHash = (function () {
+  try { return window.location.hash || ''; } catch (e) { return ''; }
 }());
-var capturedSearch = (function() {
-  try { return window.location.search || ''; } catch(e) { return ''; }
+var capturedSearch = (function () {
+  try { return window.location.search || ''; } catch (e) { return ''; }
 }());
-
 /**
  * Return the URL hash to use for a given payload parameter pattern.
  *
@@ -224,7 +237,6 @@ function getCapturedHash(requiredPattern) {
     ? capturedHash
     : (window.location.hash || '');
 }
-
 /**
  * Return the URL query string to use for a given payload parameter pattern.
  * Follows the same two-phase strategy as getCapturedHash():
@@ -277,12 +289,12 @@ var TEXT_INPUT_SELECTOR = 'input, textarea';
 function resolveFocusOutlineMode(card, bundle) {
   var features = configGet('tp_features') || {};
   var mode = features.focusOutlineMode || 'off';
-  
+
   // Apply bundle manifest default if no card override
   if (bundle && bundle.manifest && bundle.manifest.features && bundle.manifest.features.focusOutlineMode && !card.focusOutlineMode) {
     mode = bundle.manifest.features.focusOutlineMode;
   }
-  
+
   // Card override takes highest priority
   if (card && card.focusOutlineMode) {
     mode = card.focusOutlineMode;
@@ -306,12 +318,12 @@ function resolveViewportMode(card, bundle) {
   if (card && card.viewportMode) {
     mode = card.viewportMode;
   }
-  
+
   // If bundle has viewportLock: true (but not 'force'), use as default but allow override
   if (manifest && manifest.viewportLock === true && !card.viewportMode) {
     return 'locked';
   }
-  
+
   return mode || 'locked';
 }
 
@@ -332,7 +344,7 @@ function getCardOverrideValue(card, key) {
     log('[Config] ' + key + ': ' + JSON.stringify(card[key]) + ' (per-site override)');
     return card[key];
   }
-  
+
   // Fall back to global settings if card doesn't have an override
   // This ensures global preferences (text scale, etc.) apply even without site override
   try {
@@ -344,7 +356,7 @@ function getCardOverrideValue(card, key) {
   } catch (err) {
     warn('[Config] Error reading global config for ' + key + ': ' + err.message);
   }
-  
+
   log('[Config] ' + key + ': undefined (no global or site setting)');
   return null;
 }
@@ -366,7 +378,7 @@ function buildFeatureOverrides(card) {
     'navigationFix',
     'textScale',
   ];
-  
+
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var value = getCardOverrideValue(card, key);
@@ -405,11 +417,11 @@ function applyUserAgentOverride(mode) {
     var navigatorProto = window.navigator && window.navigator.__proto__;
     if (navigatorProto && Object.defineProperty) {
       Object.defineProperty(navigatorProto, 'userAgent', {
-        get: function() { return uaString; },
+        get: function () { return uaString; },
         configurable: true
       });
       Object.defineProperty(navigatorProto, 'appVersion', {
-        get: function() { return uaString; },
+        get: function () { return uaString; },
         configurable: true
       });
     }
@@ -475,12 +487,12 @@ function applyViewportMode(mode) {
 
 function applyGlobalFeaturesForCard(card, bundle) {
   log('[Config] ==== Merged Configuration for ' + (card ? (card.name || card.url) : 'unknown') + ' ====');
-  
+
   var focusMode = resolveFocusOutlineMode(card, bundle);
   var viewportMode = resolveViewportMode(card, bundle);
   var overrides = buildFeatureOverrides(card);
   // Only set focusOutlineMode in overrides after bundle features are merged
-  
+
   // Apply bundle manifest feature overrides
   // Priority: card overrides > bundle defaults > global config
   if (bundle && bundle.manifest && bundle.manifest.features) {
@@ -496,13 +508,13 @@ function applyGlobalFeaturesForCard(card, bundle) {
       }
     }
   }
-  
+
   // Set focusOutlineMode after bundle features (already resolved with priority)
   overrides.focusOutlineMode = focusMode;
 
   log('[Config] Final merged config to apply: ' + JSON.stringify(overrides));
   log('[Config] ================================================');
-  
+
   try {
     featureLoader.applyFeatures(document, overrides);
     log('[Feature] Features applied successfully');
@@ -595,9 +607,9 @@ function startTextInputProtection() {
   }
 
   // Retry a few times to catch late-rendered inputs
-  setTimeout(function() { wrapTextInputs(TEXT_INPUT_SELECTOR); }, 500);
-  setTimeout(function() { wrapTextInputs(TEXT_INPUT_SELECTOR); }, 1500);
-  setTimeout(function() { wrapTextInputs(TEXT_INPUT_SELECTOR); }, 3000);
+  setTimeout(function () { wrapTextInputs(TEXT_INPUT_SELECTOR); }, 500);
+  setTimeout(function () { wrapTextInputs(TEXT_INPUT_SELECTOR); }, 1500);
+  setTimeout(function () { wrapTextInputs(TEXT_INPUT_SELECTOR); }, 3000);
 
   if (textInputObserver) {
     textInputObserver.disconnect();
@@ -609,7 +621,7 @@ function startTextInputProtection() {
   }
 
   if (typeof MutationObserver !== 'undefined') {
-    textInputObserver = new MutationObserver(function() {
+    textInputObserver = new MutationObserver(function () {
       wrapTextInputs(TEXT_INPUT_SELECTOR);
     });
     var target = document.body || document.documentElement;
@@ -617,7 +629,7 @@ function startTextInputProtection() {
       textInputObserver.observe(target, { childList: true, subtree: true });
     }
   } else {
-    textInputInterval = setInterval(function() {
+    textInputInterval = setInterval(function () {
       wrapTextInputs(TEXT_INPUT_SELECTOR);
     }, 2000);
   }
@@ -673,7 +685,7 @@ function registerBuiltInMatchers() {
     bundleName: 'audiobookshelf',
     titleContains: ['audiobookshelf'],
     selectors: ['#siderail-buttons-container', '#appbar', '#mediaPlayerContainer'],
-    match: function() {
+    match: function () {
       try {
         var loc = window.location || {};
         var port = loc.port || '';
@@ -737,7 +749,7 @@ async function init() {
   // Detect where we are
   state.isPortalPage = detectContext();
   tpHud(state.isPortalPage ? 'Portal page' : 'Target site');
-  
+
   log('TizenPortal ' + VERSION + ' initializing...');
 
   try {
@@ -818,7 +830,7 @@ async function initPortalPage() {
             featureBundle: nav.bundleName || relayCard.featureBundle || 'default'
           });
           log('Cross-site relay: card=' + nav.cardId + ' → ' + nav.targetUrl +
-              ' (history depth ' + launchCard.crossHistory.length + ')');
+            ' (history depth ' + launchCard.crossHistory.length + ')');
           try {
             history.replaceState(null, '', window.location.href.replace(/[#&]crossnav=[^&]*/g, '').replace(/#$/, ''));
           } catch (e) { /* ignore */ }
@@ -888,7 +900,7 @@ async function initPortalPage() {
   // Initialize color button hints (make clickable)
   initColorHints();
   log('Color hints initialized');
-  
+
   // Initialize navigation mode for portal
   try {
     log('Initializing navigation mode for portal...');
@@ -902,7 +914,7 @@ async function initPortalPage() {
  * Wait briefly for #tp= or ?tp= payload to appear in the URL
  */
 function waitForPayload(maxWaitMs, intervalMs) {
-  return new Promise(function(resolve) {
+  return new Promise(function (resolve) {
     var start = Date.now();
     var interval = intervalMs || 50;
 
@@ -931,7 +943,7 @@ function waitForPayload(maxWaitMs, intervalMs) {
  */
 async function initTargetSite() {
   tpHud('Finding card...');
-  
+
   // Inject base CSS for overlay components (pointer, address bar, etc.)
   injectOverlayStyles();
 
@@ -944,11 +956,11 @@ async function initTargetSite() {
 
   // Give the URL a brief moment to settle (hash/query payload may arrive late)
   await waitForPayload(200, 50);
-  
+
   // Try to get card config from URL hash first, then localStorage
   var matchedCard = null;
   var directPayloadFound = false;
-  
+
   // Try URL hash (passed by portal when navigating)
   var hashCard = getCardFromHash();
   if (hashCard) {
@@ -977,7 +989,7 @@ async function initTargetSite() {
       saveLastCard(queryCard);
       // Clear query after reading (clean URL)
       try {
-        var cleanQueryUrl = window.location.href.replace(/([?&])tp=[^&#]+(&?)/, function(match, prefix, trailing) {
+        var cleanQueryUrl = window.location.href.replace(/([?&])tp=[^&#]+(&?)/, function (match, prefix, trailing) {
           if (prefix === '?' && trailing) return '?';
           if (prefix === '?' && !trailing) return '';
           return prefix === '&' && trailing ? '&' : '';
@@ -1027,7 +1039,7 @@ async function initTargetSite() {
       saveLastCard(matchedCard);
     }
   }
-  
+
   // Final fallback - create pseudo-card
   if (!matchedCard) {
     log('No matching card for: ' + window.location.href);
@@ -1039,7 +1051,7 @@ async function initTargetSite() {
     };
     saveLastCard(matchedCard);
   }
-  
+
   state.currentCard = matchedCard;
 
   installCardPersistenceHooks();
@@ -1060,8 +1072,11 @@ async function initTargetSite() {
   applyTextInputProtectionFromConfig(state.currentCard);
 
   // Re-apply when preferences change
-  configOnChange(function(event) {
+  configOnChange(function (event) {
     if (event && event.key === 'tp_features') {
+      // Aquí es donde aplicas el spoofing al detectar el cambio
+      applyUserAgentSpoof(event.value.uaMode);
+
       applyTextInputProtectionFromConfig(state.currentCard);
       applyGlobalFeaturesForCard(state.currentCard, getBundle(state.currentBundle || 'default'));
     }
@@ -1070,10 +1085,10 @@ async function initTargetSite() {
   // Initialize standard UI components (same as portal, they create their own elements)
   initAddressBar();
   log('Address bar initialized');
-  
+
   initDiagnosticsPanel();
   log('Diagnostics panel initialized');
-  
+
   // Create color button hints
   createSiteHints();
   log('Color hints created');
@@ -1101,7 +1116,7 @@ function installCardPersistenceHooks() {
   installLinkInterceptor();
 
   // Intercept BACK key when there is a cross-site navigation history stack.
-  setBackHandler(function(event) {
+  setBackHandler(function (event) {
     if (!state.currentCard) return false;
     var crossHistory = state.currentCard.crossHistory;
     if (!crossHistory || !crossHistory.length) return false;
@@ -1128,7 +1143,7 @@ function getCleanCurrentUrl() {
   try {
     var href = window.location.href;
     // Remove tp= from query string (?tp=VALUE or &tp=VALUE)
-    href = href.replace(/([?&])tp=[^&#]*(&?)/, function(m, pre, post) {
+    href = href.replace(/([?&])tp=[^&#]*(&?)/, function (m, pre, post) {
       if (pre === '?' && post) return '?';
       if (pre === '?' && !post) return '';
       return post ? pre : '';
@@ -1139,7 +1154,7 @@ function getCleanCurrentUrl() {
       var base = href.substring(0, hashIdx);
       var frag = href.substring(hashIdx + 1)
         .split('&')
-        .filter(function(part) { return part.indexOf('tp=') !== 0; })
+        .filter(function (part) { return part.indexOf('tp=') !== 0; })
         .join('&');
       href = frag ? base + '#' + frag : base;
     }
@@ -1190,20 +1205,20 @@ function installLinkInterceptor() {
   if (installLinkInterceptor._installed) return;
   installLinkInterceptor._installed = true;
 
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', function (e) {
     if (!state.currentCard || !state.currentCard.id) return;
 
     // Find the closest anchor element (Element.closest is available since Chrome 41)
     var el = e.target && typeof e.target.closest === 'function'
       ? e.target.closest('a')
-      : (function() {
-          var node = e.target;
-          while (node && node !== document) {
-            if (node.tagName && node.tagName.toUpperCase() === 'A') return node;
-            node = node.parentElement;
-          }
-          return null;
-        })();
+      : (function () {
+        var node = e.target;
+        while (node && node !== document) {
+          if (node.tagName && node.tagName.toUpperCase() === 'A') return node;
+          node = node.parentElement;
+        }
+        return null;
+      })();
     if (!el) return;
 
     // Skip hash-only or empty links (same-page scroll, no navigation)
@@ -1298,7 +1313,7 @@ function startUserscriptUrlWatcher() {
   userscriptUrlWatcher = {
     intervalId: intervalId,
     popstateHandler: onUrlChange,
-    stop: function() {
+    stop: function () {
       clearInterval(intervalId);
       window.removeEventListener('popstate', onUrlChange);
       userscriptUrlWatcher = null;
@@ -1320,11 +1335,11 @@ function getCardFromHash() {
     // captured hash contains no tp= (e.g. on pages loaded without a relay).
     var hash = getCapturedHash(/[#&]tp=/);
     if (!hash) return null;
-    
+
     // Look for tp= parameter in hash
     var match = hash.match(/[#&]tp=([^&]+)/);
     if (!match || !match[1]) return null;
-    
+
     // Decode base64 JSON
     var decoded = decodeURIComponent(escape(atob(match[1])));
     var payload = normalizePayload(JSON.parse(decoded));
@@ -1369,7 +1384,7 @@ function getCardFromHash() {
       // Store raw payload for CSS/JS injection
       _payload: payload
     };
-    
+
     log('Card from URL hash: ' + card.name + ' (bundle: ' + (card.featureBundle || 'default') + ')');
     return card;
   } catch (e) {
@@ -1597,15 +1612,15 @@ function findMatchingCard(url) {
   } catch (e) {
     return null;
   }
-  
+
   if (!Array.isArray(apps) || apps.length === 0) {
     return null;
   }
-  
+
   // Normalize URL for comparison
   var normalizedUrl = url.toLowerCase().replace(/\/$/, '');
   var needsSave = false;
-  
+
   for (var i = 0; i < apps.length; i++) {
     var card = apps[i];
     if (!card.url) continue;
@@ -1624,9 +1639,9 @@ function findMatchingCard(url) {
       card.featureBundle = null;
       needsSave = true;
     }
-    
+
     var cardUrl = card.url.toLowerCase().replace(/\/$/, '');
-    
+
     // Check if current URL starts with card URL (handles subpages)
     if (normalizedUrl.indexOf(cardUrl) === 0) {
       if (needsSave) {
@@ -1637,7 +1652,7 @@ function findMatchingCard(url) {
       }
       return card;
     }
-    
+
     // Also check if card URL starts with current URL (handles base domain matching)
     if (cardUrl.indexOf(normalizedUrl.split('?')[0].split('#')[0]) === 0) {
       if (needsSave) {
@@ -1656,7 +1671,7 @@ function findMatchingCard(url) {
       warn('Failed to save last card: ' + result.message);
     }
   }
-  
+
   return null;
 }
 
@@ -1684,7 +1699,7 @@ function registerPayloadUserscripts(card) {
     var existing = userscriptRegistry.getUserscriptById(script.id);
     if (existing) {
       log('Userscript already registered: ' + script.id);
-      
+
       // Ensure the script is marked as enabled since it came from payload
       userscriptEngine.setGlobalUserscriptEnabled(script.id, true);
       continue;
@@ -1707,7 +1722,7 @@ function registerPayloadUserscripts(card) {
 
     if (registered) {
       log('Registered payload userscript: ' + script.id);
-      
+
       // Mark as enabled since it came from the payload (which only includes enabled scripts)
       userscriptEngine.setGlobalUserscriptEnabled(script.id, true);
     } else {
@@ -1725,30 +1740,30 @@ async function applyBundleToPage(card) {
   tpHud('Bundle: ' + bundleName);
   log('Applying bundle for card: ' + card.name + ', bundle: ' + bundleName);
   var bundle = getBundle(bundleName);
-  
+
   if (!bundle) {
     log('Bundle not found: ' + bundleName + ', using default');
     tpHud('Bundle not found: ' + bundleName);
     bundle = getBundle('default');
   }
-  
+
   if (!bundle) {
     warn('No bundle available');
     tpHud('No bundle available!');
     return;
   }
-  
+
   var appliedBundleName = bundleName;
   log('Applying bundle: ' + (bundle.name || appliedBundleName));
   tpHud('Applying: ' + (bundle.name || appliedBundleName));
   state.currentBundle = appliedBundleName;
-  
+
   // Log manifest info if available
   if (bundle.manifest) {
     log('Bundle manifest loaded: v' + bundle.manifest.version);
     if (bundle.manifest.navigationMode) {
-      log('Bundle navigation mode: ' + (typeof bundle.manifest.navigationMode === 'object' 
-        ? bundle.manifest.navigationMode.mode 
+      log('Bundle navigation mode: ' + (typeof bundle.manifest.navigationMode === 'object'
+        ? bundle.manifest.navigationMode.mode
         : bundle.manifest.navigationMode));
     }
     if (bundle.manifest.viewportLock !== undefined) {
@@ -1763,19 +1778,19 @@ async function applyBundleToPage(card) {
     if (bundle.manifest.provides && bundle.manifest.provides.length > 0) {
       log('Bundle provides: ' + bundle.manifest.provides.join(', '));
     }
-    
+
     // Check and log dependencies
     logDependencyWarnings(bundle.name);
   } else {
     warn('Bundle has no manifest (legacy bundle)');
   }
-  
+
   // Track active bundle for state management
   setActiveBundle(bundle, card);
-  
+
   // Inject bundle CSS (bundles export as 'style' property)
   var cssContent = bundle.style || '';
-  
+
   // Also check for payload CSS from URL hash/query (untrusted)
   if (card._payload && card._payload.css) {
     log('Adding payload CSS from URL payload');
@@ -1786,7 +1801,7 @@ async function applyBundleToPage(card) {
       warn('Payload CSS was empty after sanitization');
     }
   }
-  
+
   if (cssContent) {
     var style = document.createElement('style');
     style.id = 'tp-bundle-css';
@@ -1796,7 +1811,7 @@ async function applyBundleToPage(card) {
   } else {
     warn('No CSS to inject for bundle: ' + bundle.name);
   }
-  
+
   // Call lifecycle hooks
   try {
     if (bundle.onBeforeLoad) {
@@ -1805,18 +1820,18 @@ async function applyBundleToPage(card) {
   } catch (e) {
     error('onBeforeLoad error: ' + e.message);
   }
-  
+
   // Wait for DOM ready if needed
   if (document.readyState === 'loading') {
-    await new Promise(function(resolve) {
+    await new Promise(function (resolve) {
       document.addEventListener('DOMContentLoaded', resolve);
     });
   }
-  
+
   // Apply global features from preferences (focusStyling, tabindexInjection, etc.)
   log('Applying global features from preferences...');
   applyGlobalFeaturesForCard(card, bundle);
-  
+
   try {
     if (bundle.onAfterLoad) {
       bundle.onAfterLoad(window, card);
@@ -1824,7 +1839,7 @@ async function applyBundleToPage(card) {
   } catch (e) {
     error('onAfterLoad error: ' + e.message);
   }
-  
+
   try {
     if (bundle.onActivate) {
       tpHud('Calling onActivate...');
@@ -1856,16 +1871,16 @@ async function applyBundleToPage(card) {
   } catch (e2) {
     error('Userscripts error: ' + e2.message);
   }
-  
+
   // Initialize card registration system
   // This starts the observer and processes any cards registered by the bundle
   initCards();
   log('Card registration system initialized');
-  
+
   // Initialize element registration system
   initElements();
   log('Element registration system initialized');
-  
+
   log('Bundle applied successfully');
 }
 
@@ -2136,7 +2151,7 @@ function injectOverlayStyles() {
     '.tp-log-message { color: #ccc; flex: 1; word-break: break-word; }',
     '#tp-diagnostics-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; font-size: 14px; color: #666; text-align: right; }',
   ].join('\n');
-  
+
   document.head.appendChild(style);
   log('Overlay styles injected');
 }
@@ -2149,7 +2164,7 @@ function createSiteHints() {
   var toast = document.createElement('div');
   toast.id = 'tp-toast';
   document.body.appendChild(toast);
-  
+
   // Create hints bar
   var hints = document.createElement('div');
   hints.className = 'tp-site-hints';
@@ -2169,10 +2184,10 @@ function createSiteHints() {
 
   // Define click actions: color -> { short, long }
   var siteHintConfig = {
-    'red':    { short: 'addressbar',  long: 'reload' },
-    'green':  { short: 'pointerMode', long: 'focusHighlight' },
+    'red': { short: 'addressbar', long: 'reload' },
+    'green': { short: 'pointerMode', long: 'focusHighlight' },
     'yellow': { short: 'preferences', long: 'addSite' },
-    'blue':   { short: 'diagnostics', long: 'safeMode' }
+    'blue': { short: 'diagnostics', long: 'safeMode' }
   };
 
   var hintElements = hints.querySelectorAll('.tp-site-hint');
@@ -2195,7 +2210,7 @@ function createSiteHints() {
     hint.style.cursor = 'pointer';
 
     // Short-press click on the whole hint element
-    hint.addEventListener('click', function(e) {
+    hint.addEventListener('click', function (e) {
       if (e.target && e.target.classList.contains('tp-site-hint-sub')) return;
       var action = this.getAttribute('data-action');
       if (action) {
@@ -2208,7 +2223,7 @@ function createSiteHints() {
     if (subEl && cfg.long) {
       subEl.setAttribute('data-action', cfg.long);
       subEl.style.cursor = 'pointer';
-      subEl.addEventListener('click', function(e) {
+      subEl.addEventListener('click', function (e) {
         e.stopPropagation();
         var action = this.getAttribute('data-action');
         if (action) {
@@ -2217,11 +2232,11 @@ function createSiteHints() {
       });
     }
 
-    hint.addEventListener('mouseenter', function() {
+    hint.addEventListener('mouseenter', function () {
       this.style.opacity = '1';
       this.style.color = '#ffffff';
     });
-    hint.addEventListener('mouseleave', function() {
+    hint.addEventListener('mouseleave', function () {
       this.style.opacity = '';
       this.style.color = '';
     });
@@ -2327,9 +2342,9 @@ function addCurrentSiteAndReturn() {
     // localStorage than the portal (axelnanol.github.io). The portal must
     // call addCard() itself when it loads so the card lands in the correct
     // origin's localStorage.
-    var cardData = { 
-      name: pageName, 
-      url: currentUrl, 
+    var cardData = {
+      name: pageName,
+      url: currentUrl,
       icon: faviconUrl,
       // Preserve the bundle from the current site so cross-site navigation works
       featureBundle: state.currentBundle || null
@@ -2343,7 +2358,7 @@ function addCurrentSiteAndReturn() {
   }
 
   // Navigate to portal, passing card data in hash so portal can save it
-  setTimeout(function() {
+  setTimeout(function () {
     var portalUrl = PORTAL_BASE_URL + '/index.html?v=' + encodeURIComponent(VERSION);
     if (encoded) {
       portalUrl += '#addcard=' + encoded;
@@ -2362,10 +2377,10 @@ function initColorHints() {
 
   // Define hint configurations: color class -> { short, long } actions
   var hintConfig = {
-    'red':    { short: 'addressbar',  long: 'reload' },
-    'green':  { short: 'pointerMode', long: 'editFocusedCard' },
+    'red': { short: 'addressbar', long: 'reload' },
+    'green': { short: 'pointerMode', long: 'editFocusedCard' },
     'yellow': { short: 'preferences', long: 'addSite' },
-    'blue':   { short: 'diagnostics', long: 'safeMode' }
+    'blue': { short: 'diagnostics', long: 'safeMode' }
   };
 
   // Find all hint elements and add click handlers
@@ -2373,7 +2388,7 @@ function initColorHints() {
   for (var i = 0; i < hintElements.length; i++) {
     var hint = hintElements[i];
     var keyElement = hint.querySelector('.tp-hint-key');
-    
+
     if (!keyElement) continue;
 
     // Determine which color this is
@@ -2389,12 +2404,12 @@ function initColorHints() {
 
     // Store the short-press action on the hint element
     hint.setAttribute('data-action', config.short);
-    
+
     // Make it look clickable
     hint.style.cursor = 'pointer';
-    
+
     // Add short-press click handler on the whole hint (but not on sub)
-    hint.addEventListener('click', function(e) {
+    hint.addEventListener('click', function (e) {
       // If the click was on the sub-text, let the sub handler deal with it
       if (e.target && e.target.classList.contains('tp-hint-sub')) return;
       var action = this.getAttribute('data-action');
@@ -2408,7 +2423,7 @@ function initColorHints() {
     if (subEl && config.long) {
       subEl.setAttribute('data-action', config.long);
       subEl.style.cursor = 'pointer';
-      subEl.addEventListener('click', function(e) {
+      subEl.addEventListener('click', function (e) {
         e.stopPropagation();
         var action = this.getAttribute('data-action');
         if (action) {
@@ -2418,16 +2433,16 @@ function initColorHints() {
     }
 
     // Add hover effect
-    hint.addEventListener('mouseenter', function() {
+    hint.addEventListener('mouseenter', function () {
       this.style.opacity = '1';
       this.style.color = '#ffffff';
     });
-    hint.addEventListener('mouseleave', function() {
+    hint.addEventListener('mouseleave', function () {
       this.style.opacity = '';
       this.style.color = '';
     });
   }
-  
+
   // Set up focus tracking to update hint labels contextually
   document.addEventListener('focusin', updateYellowHint);
   document.addEventListener('focusin', updateGreenHint);
@@ -2575,12 +2590,12 @@ function loadSite(card) {
 
   // Store current card in state
   state.currentCard = card;
-  
+
   // Pre-save card to sessionStorage BEFORE navigating.
   // If the target site redirects (e.g. to a login page), the #tp= hash
   // will be stripped. Saving here ensures loadLastCard() can recover it.
   saveLastCard(card);
-  
+
   // Merge global feature settings into card if not explicitly set
   // This ensures that portal preferences carry through to the site
   log('[Config] Merging global tp_features into card for cross-origin navigation...');
@@ -2605,11 +2620,11 @@ function loadSite(card) {
   }
   log('[Config] Global merge complete');
 
-  
+
   // Get the bundle for this card
   var bundle = getBundle(bundleName);
   var resolvedUa = resolveUserAgentMode(card);
-  
+
   // Build payload with bundle info: { css, js, ua, bundleName }
   var targetUrl = card.url;
   try {
@@ -2641,11 +2656,11 @@ function loadSite(card) {
       crossHistory: card.crossHistory || [],
       crossForward: card.crossForward || [],
     };
-    
+
     // NOTE: Do NOT embed bundle CSS in the URL payload.
     // It can exceed URL length limits and cause load failures.
     // Bundles are resolved locally by name at runtime.
-    
+
     // Add bundle JS initialization code (if needed)
     // The bundle object has methods, so we can't directly serialize it
     // Instead, pass bundle name and let the runtime look it up
@@ -2676,14 +2691,14 @@ function loadSite(card) {
     }
 
     targetUrl = baseUrl + '#' + hashFragment;
-    
+
     log('Payload size: ' + json.length + ' bytes, encoded: ' + encoded.length);
     tpHud('Payload: ' + json.length + 'b, encoded ' + encoded.length + 'b');
   } catch (e) {
     error('Failed to encode payload: ' + e.message);
     // Continue without hash
   }
-  
+
   log('Final URL: ' + targetUrl.substring(0, 100) + '...');
 
   if (state.isPortalPage) {
@@ -2692,7 +2707,7 @@ function loadSite(card) {
 
   // Navigate to the site - runtime will handle bundle injection
   // Small delay ensures toast/HUD render before navigation
-  setTimeout(function() {
+  setTimeout(function () {
     window.location.href = targetUrl;
   }, 250);
 }
@@ -2774,7 +2789,7 @@ function navigateUrl(url) {
  */
 function showToast(message, duration) {
   duration = duration || 3000;
-  
+
   // Use standard toast element (created on both portal and target sites)
   var toast = document.getElementById('tp-toast');
   if (!toast) {
@@ -2784,12 +2799,12 @@ function showToast(message, duration) {
     toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.95);color:#fff;padding:16px 32px;border-radius:12px;font-size:18px;z-index:2147483647;opacity:0;transition:opacity 0.3s;pointer-events:none;';
     document.body.appendChild(toast);
   }
-  
+
   toast.textContent = message;
   toast.classList.add('visible');
   toast.style.opacity = '1';
 
-  setTimeout(function() {
+  setTimeout(function () {
     toast.classList.remove('visible');
     toast.style.opacity = '0';
   }, duration);
@@ -2801,7 +2816,7 @@ function showToast(message, duration) {
  */
 function showLoading(text) {
   if (!state.isPortalPage) return;
-  
+
   var loading = document.getElementById('tp-loading');
   var loadingText = document.getElementById('tp-loading-text');
   if (loading) {
@@ -2817,7 +2832,7 @@ function showLoading(text) {
  */
 function hideLoading() {
   if (!state.isPortalPage) return;
-  
+
   var loading = document.getElementById('tp-loading');
   if (loading) {
     loading.classList.remove('active');
@@ -2929,7 +2944,7 @@ var TizenPortalAPI = {
   setPortalHintsVisible: setPortalHintsVisible,
   setPortalHintsPosition: setPortalHintsPosition,
   updatePortalHints: updatePortalHints,
-  getCurrentCard: function() {
+  getCurrentCard: function () {
     return state.currentCard;
   },
 
@@ -2939,7 +2954,7 @@ var TizenPortalAPI = {
     getActive: getActiveBundle,
     getActiveName: getActiveBundleName,
     get: getBundle,
-    getManifest: function(bundleName) {
+    getManifest: function (bundleName) {
       var bundle = getBundle(bundleName);
       return bundle ? bundle.manifest : null;
     },
@@ -2992,7 +3007,7 @@ var TizenPortalAPI = {
     getForPayload: userscriptEngine.getGlobalUserscriptsForPayload,
     registry: featureLoader.registry,  // Updated to use unified registry
   },
-  
+
   // Unified registry (for advanced use - accesses same registry as features/userscripts)
   registry: featureLoader.registry,
 
@@ -3000,7 +3015,7 @@ var TizenPortalAPI = {
   showToast: showToast,
   showLoading: showLoading,
   hideLoading: hideLoading,
-  
+
   // Site overlay controls
   toggleSiteAddressBar: toggleSiteAddressBar,
   toggleSiteDiagnostics: toggleSiteDiagnostics,
@@ -3009,7 +3024,7 @@ var TizenPortalAPI = {
   _portalFaviconUrl: TIZENPORTAL_FAVICON_URL,
 
   // State access (read-only)
-  getState: function() {
+  getState: function () {
     return {
       initialized: state.initialized,
       isPortalPage: state.isPortalPage,
@@ -3049,3 +3064,4 @@ if (document.readyState === 'loading') {
 
 // Export for module use
 export default TizenPortalAPI;
+

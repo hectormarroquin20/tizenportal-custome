@@ -19,7 +19,7 @@ var DEFAULT_CONFIG = {
   safeMode: false,
   lastVisitedUrl: null,
   diagnosticsEnabled: false,
-  
+
   // Portal preferences
   tp_portal: {
     theme: 'dark',
@@ -32,7 +32,7 @@ var DEFAULT_CONFIG = {
     hintsPosition: 'bottom-left',
     showHints: true,
   },
-  
+
   // Global site features
   tp_features: {
     focusStyling: true,
@@ -48,10 +48,11 @@ var DEFAULT_CONFIG = {
     hideScrollbars: false,
     wrapTextInputs: true,
     viewportMode: 'locked',
-    uaMode: 'tizen',
+    //uaMode: 'tizen',
+    uaMode: 'chrome',
     textScale: 'medium',
     navigationFix: true,
-    
+
     // Navigation mode: which navigation system to use
     // 'geometric' - Use new library in geometric mode (strict axis-aligned) - DEFAULT
     // 'directional' - Use new library in directional mode (cone-based, forgiving)
@@ -104,12 +105,12 @@ function loadConfig() {
           configCache[key] = DEFAULT_CONFIG[key];
         }
       }
-      
+
       // Deep merge for tp_features to ensure new nested keys appear for existing users
       if (configCache.tp_features && DEFAULT_CONFIG.tp_features) {
         for (var featureKey in DEFAULT_CONFIG.tp_features) {
-          if (DEFAULT_CONFIG.tp_features.hasOwnProperty(featureKey) && 
-              !configCache.tp_features.hasOwnProperty(featureKey)) {
+          if (DEFAULT_CONFIG.tp_features.hasOwnProperty(featureKey) &&
+            !configCache.tp_features.hasOwnProperty(featureKey)) {
             configCache.tp_features[featureKey] = DEFAULT_CONFIG.tp_features[featureKey];
           }
         }
@@ -216,13 +217,13 @@ function emitChange(key, newValue, oldValue) {
 export function configOnChange(callback) {
   if (typeof callback !== 'function') {
     console.warn('TizenPortal: configOnChange requires a function');
-    return function() {};
+    return function () { };
   }
 
   changeListeners.push(callback);
 
   // Return unsubscribe function
-  return function() {
+  return function () {
     var index = changeListeners.indexOf(callback);
     if (index !== -1) {
       changeListeners.splice(index, 1);
@@ -261,34 +262,34 @@ export function configGetAll() {
  */
 export function configGet(key) {
   var value = configRead(key);
-  
+
   // If value doesn't exist, return default
   if (value === undefined && DEFAULT_CONFIG.hasOwnProperty(key)) {
     return DEFAULT_CONFIG[key];
   }
-  
+
   // If value is object and default is object, merge
   if (value && typeof value === 'object' && DEFAULT_CONFIG.hasOwnProperty(key) && typeof DEFAULT_CONFIG[key] === 'object') {
     var merged = {};
     var defaults = DEFAULT_CONFIG[key];
-    
+
     // First, add all keys from defaults
     for (var k in defaults) {
       if (defaults.hasOwnProperty(k)) {
         merged[k] = value.hasOwnProperty(k) ? value[k] : defaults[k];
       }
     }
-    
+
     // Then, add any keys from stored that are NOT in defaults (e.g., textScale, navigationfix)
     for (var k in value) {
       if (value.hasOwnProperty(k) && !defaults.hasOwnProperty(k)) {
         merged[k] = value[k];
       }
     }
-    
+
     return merged;
   }
-  
+
   return value;
 }
 
