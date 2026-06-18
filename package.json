@@ -1,6 +1,6 @@
 {
-  "name": "@axelnanol/tizenportal",
-  "appName": "TizenPortal",
+  "name": "@hector/tizenportal-custome",
+  "appName": "TizenPortal-custome",
   "version": "1120",
   "description": "Universal Tizen Browser Shell",
   "type": "module",
@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/axelnanol/tizenportal"
+    "url": "https://github.com/hectormarroquin20/tizenportal-custome"
   },
   "scripts": {
     "build": "rollup -c",
