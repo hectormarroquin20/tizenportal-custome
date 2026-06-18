@@ -77,7 +77,7 @@ import {
 } from './cards.js';
 import {
   registerElements, unregisterElements, clearRegistrations as clearElementRegistrations,
-  getElementRegistrations, processElements,
+  getRegistrations as getElementRegistrations, processElements,
   initElements, shutdownElements
 } from './elements.js';
 import {
@@ -94,6 +94,17 @@ import {
   setNavigationEnabled,
   isNavigationEnabled,
 } from '../navigation/helpers.js';
+
+
+(function () {
+  console.log('TizenPortal: El script ha sido inyectado y ejecutado.');
+
+  // Spoofing de User-Agent inmediato
+  Object.defineProperty(navigator, 'userAgent', {
+    get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    configurable: true
+  });
+})();
 
 function registerTvKey(keyName) {
   try {
@@ -741,6 +752,7 @@ function detectContext() {
  * Initialize TizenPortal
  */
 async function init() {
+  console.log('TizenPortal: init() ejecutado.');
   if (state.initialized) {
     warn('TizenPortal already initialized');
     return;
